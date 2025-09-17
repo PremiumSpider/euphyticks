@@ -1,71 +1,170 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --sat: env(safe-area-inset-top);
-  --sar: env(safe-area-inset-right);
-  --sab: env(safe-area-inset-bottom);
-  --sal: env(safe-area-inset-left);
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-@keyframes gradient-x {
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* Custom scrollbar for ledger */
+.max-h-80::-webkit-scrollbar {
+  width: 6px;
+}
+
+.max-h-80::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.max-h-80::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.max-h-80::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Ensure proper backdrop blur support */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Custom range slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-track {
+  background: rgba(255, 255, 255, 0.2);
+  height: 6px;
+  border-radius: 3px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #3b82f6;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input[type="range"]::-moz-range-track {
+  background: rgba(255, 255, 255, 0.2);
+  height: 6px;
+  border-radius: 3px;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: #3b82f6;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, .cursor-pointer {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Hover effects for better UX */
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Ensure text is readable on all backgrounds */
+.text-white {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Custom file input styling */
+input[type="file"] {
+  display: none;
+}
+
+/* Crosshair cursor for image marking */
+.cursor-crosshair {
+  cursor: crosshair;
+}
+
+/* Animation for mark placement */
+@keyframes markAppear {
   0% {
-    background-position: 0% 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
   }
   50% {
-    background-position: 100% 50%;
+    transform: translate(-50%, -50%) scale(1.2);
   }
   100% {
-    background-position: 0% 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
-.animate-gradient-x {
-  background-size: 200% 100%;
-  animation: gradient-x 3s linear infinite;
-}
-
-/* Irish Green Gradient Text Animations */
-.irish-green-title {
-  background: linear-gradient(45deg, #10b981, #059669, #047857, #065f46);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-x 3s linear infinite;
-}
-
-.irish-green-subtitle {
-  background: linear-gradient(45deg, #22c55e, #16a34a, #15803d, #166534);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-x 3s linear infinite;
-}
-
-/* Safe area utilities */
-.top-safe-4 {
-  top: calc(1rem + var(--sat, 0px));
-}
-
-.bottom-safe-4 {
-  bottom: calc(1rem + var(--sab, 0px));
-}
-
-.left-safe-4 {
-  left: calc(1rem + var(--sal, 0px));
-}
-
-.right-safe-4 {
-  right: calc(1rem + var(--sar, 0px));
-}
-
-.h-screen-safe {
-  height: calc(100vh - var(--sat, 0px) - var(--sab, 0px));
-}
-
-.min-h-screen-safe {
-  min-height: calc(100vh - var(--sat, 0px) - var(--sab, 0px));
+.mark-animation {
+  animation: markAppear 0.3s ease-out;
 }
