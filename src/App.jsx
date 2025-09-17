@@ -133,11 +133,15 @@ function App() {
     const xPercent = ((x - (markSizeInPixels/2)) / imageRect.width) * 100;
     const yPercent = ((y - (markSizeInPixels/2)) / imageRect.height) * 100;
     
+    // Randomly choose orange or red for the border
+    const borderColor = Math.random() < 0.5 ? 'orange' : 'red';
+    
     setMarks([...marks, { 
       id: Date.now(),
       x: xPercent, 
       y: yPercent,
-      size: markSize
+      size: markSize,
+      borderColor: borderColor
     }]);
   }
 
@@ -799,12 +803,41 @@ function App() {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                   >
-                    {/* Custom X Mark */}
-                    <div className="x-mark w-full h-full relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-orange-500 to-red-600 transform rotate-45 rounded-sm shadow-lg"></div>
-                      <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-orange-500 to-red-600 transform -rotate-45 rounded-sm shadow-lg"></div>
-                      <div className="absolute inset-1 bg-gradient-to-br from-red-400 via-orange-400 to-red-500 transform rotate-45 rounded-sm"></div>
-                      <div className="absolute inset-1 bg-gradient-to-br from-red-400 via-orange-400 to-red-500 transform -rotate-45 rounded-sm"></div>
+                    {/* Euphy X Mark - Clipped to X Shape with Black Border */}
+                    <div className="euphy-x-mark w-full h-full relative">
+                      {/* Multiple colored border layers for thick outline */}
+                      {[
+                        { x: -3, y: 0 }, { x: 3, y: 0 }, { x: 0, y: -3 }, { x: 0, y: 3 },
+                        { x: -2, y: -2 }, { x: 2, y: -2 }, { x: -2, y: 2 }, { x: 2, y: 2 },
+                        { x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }
+                      ].map((offset, index) => (
+                        <img
+                          key={index}
+                          src="/euphy.png"
+                          alt="Euphy marker border"
+                          className="absolute inset-0 w-full h-full object-contain"
+                          style={{ 
+                            clipPath: 'polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%)',
+                            filter: `brightness(0) saturate(0)`,
+                            backgroundColor: mark.borderColor || 'black',
+                            mixBlendMode: 'multiply',
+                            transform: `translate(${offset.x}px, ${offset.y}px)`,
+                            zIndex: 1
+                          }}
+                        />
+                      ))}
+                      {/* Main euphy image */}
+                      <img
+                        src="/euphy.png"
+                        alt="Euphy marker"
+                        className="absolute inset-0 w-full h-full object-contain drop-shadow-lg"
+                        style={{ 
+                          filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))',
+                          clipPath: 'polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%)',
+                          zIndex: 10,
+                          position: 'relative'
+                        }}
+                      />
                     </div>
                   </motion.div>
                 ))}
