@@ -15,6 +15,10 @@ function App() {
   const [ledgerRecords, setLedgerRecords] = useState([])
   const [showAddRecord, setShowAddRecord] = useState(false)
   const [showEditPanel, setShowEditPanel] = useState(false)
+  const [showEditLedger, setShowEditLedger] = useState(false)
+  const [editingRecord, setEditingRecord] = useState(null)
+  const [queuedPopups, setQueuedPopups] = useState([])
+  const [currentQueuedPopup, setCurrentQueuedPopup] = useState(null)
   
   // Add record form state
   const [newRecord, setNewRecord] = useState({
@@ -143,17 +147,101 @@ function App() {
       name: newRecord.name.trim(),
       number: newRecord.number.trim(),
       position: newRecord.position,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      status: null // Will be set to 'hit' or 'miss' later
     }
 
-    setLedgerRecords(prev => {
-      const updated = [record, ...prev]
-      return updated.slice(0, 10) // Keep only last 10 records
-    })
+    // Add to queued popups for bottom right notification with question format
+    const queuedItem = {
+      id: Date.now(),
+      record: record,
+      status: 'question' // Special status for question mode
+    }
+    
+    setQueuedPopups(prev => [...prev, queuedItem])
+    setShowAddRecord(false)
 
     // Reset form
     setNewRecord({ name: '', number: '', position: 'M' })
-    setShowAddRecord(false)
+  }
+
+  // Handle hit/miss confirmation through popup dismissal
+  const handleHitMissConfirm = (status, record) => {
+    const finalRecord = {
+      ...record,
+      status: status
+    }
+
+    setLedgerRecords(prev => {
+      const updated = [finalRecord, ...prev]
+      return updated.slice(0, 10) // Keep only last 10 records
+    })
+
+    // Add confirmation notification to queue
+    const confirmationItem = {
+      id: Date.now() + 1, // Ensure unique ID
+      record: finalRecord,
+      status: status
+    }
+    
+    setQueuedPopups(prev => [...prev, confirmationItem])
+  }
+
+  // Handle queued popup display
+  useEffect(() => {
+    if (queuedPopups.length > 0 && !currentQueuedPopup) {
+      const nextPopup = queuedPopups[0]
+      setCurrentQueuedPopup(nextPopup)
+      
+      // Auto-dismiss after 3 seconds
+      const timer = setTimeout(() => {
+        setCurrentQueuedPopup(null)
+        setQueuedPopups(prev => prev.slice(1))
+      }, 3000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [queuedPopups, currentQueuedPopup])
+
+  // Handle manual dismiss of queued popup
+  const handleDismissQueuedPopup = (isHit = null) => {
+    if (currentQueuedPopup && currentQueuedPopup.status === 'question') {
+      // If it's a question popup and user provided hit/miss choice
+      if (isHit !== null) {
+        const status = isHit ? 'hit' : 'miss'
+        handleHitMissConfirm(status, currentQueuedPopup.record)
+      }
+    }
+    
+    setCurrentQueuedPopup(null)
+    setQueuedPopups(prev => prev.slice(1))
+  }
+
+  // Handle edit ledger record
+  const handleEditRecord = (record) => {
+    setEditingRecord({ ...record })
+    setShowEditLedger(true)
+  }
+
+  // Handle save edited record
+  const handleSaveEditedRecord = () => {
+    if (!editingRecord) return
+
+    setLedgerRecords(prev => 
+      prev.map(record => 
+        record.id === editingRecord.id ? editingRecord : record
+      )
+    )
+
+    setEditingRecord(null)
+    setShowEditLedger(false)
+  }
+
+  // Handle delete record
+  const handleDeleteRecord = (recordId) => {
+    setLedgerRecords(prev => prev.filter(record => record.id !== recordId))
+    setEditingRecord(null)
+    setShowEditLedger(false)
   }
 
   // Handle preset name click
@@ -255,6 +343,121 @@ function App() {
               >
                 Add to Ledger
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+      {/* Edit Ledger Popup */}
+      <AnimatePresence>
+        {showEditLedger && editingRecord && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              className="bg-black/90 backdrop-blur-md rounded-xl p-6 border border-white/20 w-96 max-w-[90vw]"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white font-bold text-lg">Edit Record</h3>
+                <button
+                  onClick={() => setShowEditLedger(false)}
+                  className="text-white/70 hover:text-white text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {/* Name Input */}
+              <div className="mb-4">
+                <label className="block text-white/70 text-sm mb-2">Name</label>
+                <input
+                  type="text"
+                  value={editingRecord.name}
+                  onChange={(e) => setEditingRecord(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                />
+              </div>
+
+              {/* Number Input */}
+              <div className="mb-4">
+                <label className="block text-white/70 text-sm mb-2">Number</label>
+                <input
+                  type="text"
+                  value={editingRecord.number}
+                  onChange={(e) => setEditingRecord(prev => ({ ...prev, number: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                />
+              </div>
+
+              {/* Position Buttons */}
+              <div className="mb-4">
+                <label className="block text-white/70 text-sm mb-2">Position</label>
+                <div className="flex gap-2">
+                  {['L', 'M', 'R'].map((pos) => (
+                    <button
+                      key={pos}
+                      onClick={() => setEditingRecord(prev => ({ ...prev, position: pos }))}
+                      className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
+                        editingRecord.position === pos
+                          ? 'bg-blue-500/50 text-blue-200 border border-blue-400'
+                          : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                      }`}
+                    >
+                      {pos}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Buttons */}
+              <div className="mb-4">
+                <label className="block text-white/70 text-sm mb-2">Status</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingRecord(prev => ({ ...prev, status: 'hit' }))}
+                    className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                      editingRecord.status === 'hit'
+                        ? 'bg-green-500/50 text-green-200 border border-green-400'
+                        : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                    }`}
+                  >
+                    <span className="text-lg">✓</span>
+                    Hit
+                  </button>
+                  <button
+                    onClick={() => setEditingRecord(prev => ({ ...prev, status: 'miss' }))}
+                    className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                      editingRecord.status === 'miss'
+                        ? 'bg-red-500/50 text-red-200 border border-red-400'
+                        : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                    }`}
+                  >
+                    <span className="text-lg">✕</span>
+                    Miss
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveEditedRecord}
+                  disabled={!editingRecord.name.trim() || !editingRecord.number.trim()}
+                  className="flex-1 py-2 bg-blue-500/30 text-blue-200 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => handleDeleteRecord(editingRecord.id)}
+                  className="px-4 py-2 bg-red-500/30 text-red-200 border border-red-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-red-500/40 transition-all"
+                >
+                  Delete
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -388,6 +591,16 @@ function App() {
                   </div>
                 </div>
 
+                {/* Edit Ledger Button */}
+                {ledgerEnabled && ledgerRecords.length > 0 && (
+                  <button
+                    onClick={() => setShowEditLedger(true)}
+                    className="w-full py-2 mb-4 bg-purple-500/30 text-purple-200 border border-purple-400/50 rounded-lg backdrop-blur-sm hover:bg-purple-500/40 transition-all"
+                  >
+                    Edit Ledger
+                  </button>
+                )}
+
                 {/* Reset Button */}
                 <button
                   onClick={() => {
@@ -454,6 +667,109 @@ function App() {
             </TransformComponent>
           </TransformWrapper>
 
+          {/* Queued Notification Popup - Bottom Right */}
+          <AnimatePresence>
+            {currentQueuedPopup && (
+              <motion.div
+                initial={{ opacity: 0, x: 300, y: 20 }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                exit={{ opacity: 0, x: 300, y: 20 }}
+                className="fixed bottom-6 right-6 z-50"
+              >
+                {currentQueuedPopup.status === 'question' ? (
+                  /* Question Mode - Hit/Miss Selection */
+                  <motion.div
+                    className="backdrop-blur-md rounded-xl p-4 border bg-blue-500/20 border-blue-400/50 w-72"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-semibold text-blue-200 flex items-center gap-2">
+                        <span>
+                          {currentQueuedPopup.record.name} {currentQueuedPopup.record.position}{currentQueuedPopup.record.number} ?
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDismissQueuedPopup()
+                        }}
+                        className="text-white/70 hover:text-white text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    
+                    <div className="text-sm text-blue-300 mb-3">
+                      Was this a hit or miss?
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDismissQueuedPopup(true)
+                        }}
+                        className="flex-1 py-2 bg-green-500/30 text-green-200 border border-green-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-green-500/40 transition-all flex items-center justify-center gap-2"
+                      >
+                        <span className="text-lg">✓</span>
+                        Hit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDismissQueuedPopup(false)
+                        }}
+                        className="flex-1 py-2 bg-red-500/30 text-red-200 border border-red-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-red-500/40 transition-all flex items-center justify-center gap-2"
+                      >
+                        <span className="text-lg">✕</span>
+                        Miss
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  /* Confirmation Mode - Show Result */
+                  <motion.div
+                    className={`backdrop-blur-md rounded-xl p-4 border w-64 ${
+                      currentQueuedPopup.status === 'hit'
+                        ? 'bg-green-500/20 border-green-400/50'
+                        : 'bg-red-500/20 border-red-400/50'
+                    }`}
+                    onClick={handleDismissQueuedPopup}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`font-semibold flex items-center gap-2 ${
+                        currentQueuedPopup.status === 'hit' ? 'text-green-200' : 'text-red-200'
+                      }`}>
+                        <span>
+                          {currentQueuedPopup.record.name} {currentQueuedPopup.record.position}{currentQueuedPopup.record.number}
+                        </span>
+                        <span className="text-xl">
+                          {currentQueuedPopup.status === 'hit' ? '✓' : '✕'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDismissQueuedPopup()
+                        }}
+                        className="text-white/70 hover:text-white text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className={`text-sm capitalize ${
+                      currentQueuedPopup.status === 'hit' ? 'text-green-300' : 'text-red-300'
+                    }`}>
+                      {currentQueuedPopup.status === 'hit' ? 'Hit' : 'Miss'}
+                    </div>
+                    <div className="text-xs text-white/50 mt-1">
+                      Click to dismiss
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Ledger Display - Bottom Left (Full Screen Mode) */}
           <AnimatePresence>
             {ledgerEnabled && ledgerRecords.length > 0 && (
@@ -499,12 +815,20 @@ function App() {
                           delay: index * 0.1,
                           backgroundColor: { duration: 0.3 }
                         }}
-                        className="p-3 border-b border-white/10 last:border-b-0 transition-all duration-300"
+                        className="p-3 border-b border-white/10 last:border-b-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
+                        onClick={() => handleEditRecord(record)}
                       >
-                        <div className={`font-semibold transition-all duration-300 ${
+                        <div className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
                           isLedgerFlashing ? 'text-blue-100' : 'text-white'
                         }`}>
-                          {record.name} {record.position}{record.number}
+                          <span>{record.name} {record.position}{record.number}</span>
+                          {record.status && (
+                            <span className={`text-lg ${
+                              record.status === 'hit' ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {record.status === 'hit' ? '✓' : '✕'}
+                            </span>
+                          )}
                         </div>
                         <div className={`text-sm transition-all duration-300 ${
                           isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
