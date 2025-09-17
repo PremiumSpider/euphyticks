@@ -13,6 +13,7 @@ function App() {
   // Ledger state
   const [ledgerEnabled, setLedgerEnabled] = useState(false)
   const [ledgerRecords, setLedgerRecords] = useState([])
+  const [pendingRecords, setPendingRecords] = useState([]) // Records waiting for hit/miss confirmation
   const [showAddRecord, setShowAddRecord] = useState(false)
   const [showEditPanel, setShowEditPanel] = useState(false)
   const [showEditLedger, setShowEditLedger] = useState(false)
@@ -77,7 +78,9 @@ function App() {
 
   // Get last 5 unique names for preset buttons
   const getLastFiveNames = () => {
-    const uniqueNames = [...new Set(ledgerRecords.map(record => record.name))]
+    // Combine both pending and confirmed records
+    const allRecords = [...pendingRecords, ...ledgerRecords]
+    const uniqueNames = [...new Set(allRecords.map(record => record.name))]
     return uniqueNames.slice(-5)
   }
 
@@ -148,9 +151,12 @@ function App() {
       number: newRecord.number.trim(),
       position: newRecord.position,
       timestamp: Date.now(),
-      status: null // Will be set to 'hit' or 'miss' later
+      status: 'pending' // Pending confirmation
     }
 
+    // Add to pending records (will show in ledger with ?)
+    setPendingRecords(prev => [record, ...prev])
+    
     // Add to queued popups for bottom right notification with question format
     const queuedItem = {
       id: Date.now(),
@@ -165,6 +171,35 @@ function App() {
     setNewRecord({ name: '', number: '', position: 'M' })
   }
 
+  // Handle adding another record (keeps modal open)
+  const handleAddAnotherRecord = () => {
+    if (!newRecord.name.trim() || !newRecord.number.trim()) return
+
+    const record = {
+      id: Date.now(),
+      name: newRecord.name.trim(),
+      number: newRecord.number.trim(),
+      position: newRecord.position,
+      timestamp: Date.now(),
+      status: 'pending' // Pending confirmation
+    }
+
+    // Add to pending records (will show in ledger with ?)
+    setPendingRecords(prev => [record, ...prev])
+    
+    // Add to queued popups for bottom right notification with question format
+    const queuedItem = {
+      id: Date.now(),
+      record: record,
+      status: 'question' // Special status for question mode
+    }
+    
+    setQueuedPopups(prev => [...prev, queuedItem])
+    
+    // Keep modal open, just reset form
+    setNewRecord({ name: '', number: '', position: 'M' })
+  }
+
   // Handle hit/miss confirmation through popup dismissal
   const handleHitMissConfirm = (status, record) => {
     const finalRecord = {
@@ -172,6 +207,10 @@ function App() {
       status: status
     }
 
+    // Remove from pending records
+    setPendingRecords(prev => prev.filter(r => r.id !== record.id))
+
+    // Add to confirmed ledger records
     setLedgerRecords(prev => {
       const updated = [finalRecord, ...prev]
       return updated.slice(0, 10) // Keep only last 10 records
@@ -273,6 +312,22 @@ function App() {
                 </button>
               </div>
               
+              {/* Show Previous Entries */}
+              {pendingRecords.length > 0 && (
+                <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
+                  <div className="text-white/70 text-sm mb-2">Previous Entries:</div>
+                  <div className="space-y-1">
+                    {pendingRecords.slice(0, 3).map((record, index) => (
+                      <div key={record.id} className="text-sm text-white/60 flex items-center gap-2">
+                        <span className="text-yellow-400">?</span>
+                        <span>{record.name} {record.position}{record.number}</span>
+                        <span className="text-white/40">• {getRelativeTime(record.timestamp)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {/* Name Input */}
               <div className="mb-4">
                 <label className="block text-white/70 text-sm mb-2">Name</label>
@@ -335,14 +390,22 @@ function App() {
                 </div>
               )}
 
-              {/* Add Button */}
-              <button
-                onClick={handleAddRecord}
-                disabled={!newRecord.name.trim() || !newRecord.number.trim()}
-                className="w-full py-2 bg-green-500/30 text-green-200 border border-green-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-green-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add to Ledger
-              </button>
+              {/* Add Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={!newRecord.name.trim() || !newRecord.number.trim() ? () => setShowAddRecord(false) : handleAddRecord}
+                  className="flex-1 py-2 bg-green-500/30 text-green-200 border border-green-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-green-500/40 transition-all"
+                >
+                  {!newRecord.name.trim() || !newRecord.number.trim() ? 'Close' : 'Add to Ledger'}
+                </button>
+                <button
+                  onClick={handleAddAnotherRecord}
+                  disabled={!newRecord.name.trim() || !newRecord.number.trim()}
+                  className="flex-1 py-2 bg-blue-500/30 text-blue-200 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Another
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -772,7 +835,7 @@ function App() {
 
           {/* Ledger Display - Bottom Left (Full Screen Mode) */}
           <AnimatePresence>
-            {ledgerEnabled && ledgerRecords.length > 0 && (
+            {ledgerEnabled && (pendingRecords.length > 0 || ledgerRecords.length > 0) && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ 
@@ -802,9 +865,10 @@ function App() {
                   </div>
                   
                   <div className="max-h-80 overflow-y-auto">
-                    {ledgerRecords.map((record, index) => (
+                    {/* Pending Records (with ?) */}
+                    {pendingRecords.map((record, index) => (
                       <motion.div
-                        key={record.id}
+                        key={`pending-${record.id}`}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ 
                           opacity: 1, 
@@ -813,6 +877,36 @@ function App() {
                         }}
                         transition={{ 
                           delay: index * 0.1,
+                          backgroundColor: { duration: 0.3 }
+                        }}
+                        className="p-3 border-b border-white/10 transition-all duration-300 cursor-default"
+                      >
+                        <div className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
+                          isLedgerFlashing ? 'text-blue-100' : 'text-white'
+                        }`}>
+                          <span>{record.name} {record.position}{record.number}</span>
+                          <span className="text-lg text-yellow-400">?</span>
+                        </div>
+                        <div className={`text-sm transition-all duration-300 ${
+                          isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
+                        }`}>
+                          {getRelativeTime(record.timestamp)} • Pending
+                        </div>
+                      </motion.div>
+                    ))}
+                    
+                    {/* Confirmed Records (with ✓ or ✕) */}
+                    {ledgerRecords.map((record, index) => (
+                      <motion.div
+                        key={`confirmed-${record.id}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ 
+                          opacity: 1, 
+                          x: 0,
+                          backgroundColor: isLedgerFlashing ? 'rgba(59, 130, 246, 0.2)' : 'transparent'
+                        }}
+                        transition={{ 
+                          delay: (pendingRecords.length + index) * 0.1,
                           backgroundColor: { duration: 0.3 }
                         }}
                         className="p-3 border-b border-white/10 last:border-b-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
