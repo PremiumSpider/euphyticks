@@ -414,7 +414,7 @@ function App() {
 
       {/* Edit Ledger Popup */}
       <AnimatePresence>
-        {showEditLedger && editingRecord && (
+        {showEditLedger && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -422,104 +422,186 @@ function App() {
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
           >
             <motion.div
-              className="bg-black/90 backdrop-blur-md rounded-xl p-6 border border-white/20 w-96 max-w-[90vw]"
+              className="bg-black/90 backdrop-blur-md rounded-xl p-6 border border-white/20 w-[600px] max-w-[90vw] max-h-[80vh] overflow-hidden"
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white font-bold text-lg">Edit Record</h3>
+                <h3 className="text-white font-bold text-lg">Edit Ledger</h3>
                 <button
-                  onClick={() => setShowEditLedger(false)}
+                  onClick={() => {
+                    setShowEditLedger(false)
+                    setEditingRecord(null)
+                  }}
                   className="text-white/70 hover:text-white text-xl"
                 >
                   ✕
                 </button>
               </div>
               
-              {/* Name Input */}
-              <div className="mb-4">
-                <label className="block text-white/70 text-sm mb-2">Name</label>
-                <input
-                  type="text"
-                  value={editingRecord.name}
-                  onChange={(e) => setEditingRecord(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
-                />
-              </div>
-
-              {/* Number Input */}
-              <div className="mb-4">
-                <label className="block text-white/70 text-sm mb-2">Number</label>
-                <input
-                  type="text"
-                  value={editingRecord.number}
-                  onChange={(e) => setEditingRecord(prev => ({ ...prev, number: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
-                />
-              </div>
-
-              {/* Position Buttons */}
-              <div className="mb-4">
-                <label className="block text-white/70 text-sm mb-2">Position</label>
-                <div className="flex gap-2">
-                  {['L', 'M', 'R'].map((pos) => (
-                    <button
-                      key={pos}
-                      onClick={() => setEditingRecord(prev => ({ ...prev, position: pos }))}
-                      className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-                        editingRecord.position === pos
-                          ? 'bg-blue-500/50 text-blue-200 border border-blue-400'
-                          : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
-                      }`}
-                    >
-                      {pos}
-                    </button>
-                  ))}
+              {/* Quick Actions */}
+              <div className="mb-4 flex gap-3">
+                <button
+                  onClick={() => {
+                    if (ledgerRecords.length > 0) {
+                      setLedgerRecords(prev => prev.slice(1))
+                    }
+                  }}
+                  disabled={ledgerRecords.length === 0}
+                  className="px-4 py-2 bg-red-500/30 text-red-200 border border-red-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Quick Erase Last Entry
+                </button>
+                <div className="text-white/70 text-sm flex items-center">
+                  {ledgerRecords.length} confirmed entries
                 </div>
               </div>
 
-              {/* Status Buttons */}
-              <div className="mb-4">
-                <label className="block text-white/70 text-sm mb-2">Status</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditingRecord(prev => ({ ...prev, status: 'hit' }))}
-                    className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                      editingRecord.status === 'hit'
-                        ? 'bg-green-500/50 text-green-200 border border-green-400'
-                        : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
-                    }`}
-                  >
-                    <span className="text-lg">✓</span>
-                    Hit
-                  </button>
-                  <button
-                    onClick={() => setEditingRecord(prev => ({ ...prev, status: 'miss' }))}
-                    className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                      editingRecord.status === 'miss'
-                        ? 'bg-red-500/50 text-red-200 border border-red-400'
-                        : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
-                    }`}
-                  >
-                    <span className="text-lg">✕</span>
-                    Miss
-                  </button>
-                </div>
-              </div>
+              {/* All Entries List */}
+              <div className="max-h-96 overflow-y-auto">
+                {ledgerRecords.length === 0 ? (
+                  <div className="text-white/50 text-center py-8">
+                    No confirmed entries to edit
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {ledgerRecords.map((record, index) => (
+                      <motion.div
+                        key={record.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`p-4 rounded-lg border transition-all ${
+                          editingRecord && editingRecord.id === record.id
+                            ? 'bg-blue-500/20 border-blue-400/50'
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        {editingRecord && editingRecord.id === record.id ? (
+                          /* Edit Mode */
+                          <div className="space-y-3">
+                            <div className="flex gap-3">
+                              {/* Name Input */}
+                              <div className="flex-1">
+                                <label className="block text-white/70 text-xs mb-1">Name</label>
+                                <input
+                                  type="text"
+                                  value={editingRecord.name}
+                                  onChange={(e) => setEditingRecord(prev => ({ ...prev, name: e.target.value }))}
+                                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400 text-sm"
+                                />
+                              </div>
+                              
+                              {/* Number Input */}
+                              <div className="w-20">
+                                <label className="block text-white/70 text-xs mb-1">Number</label>
+                                <input
+                                  type="text"
+                                  value={editingRecord.number}
+                                  onChange={(e) => setEditingRecord(prev => ({ ...prev, number: e.target.value }))}
+                                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400 text-sm"
+                                />
+                              </div>
+                            </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSaveEditedRecord}
-                  disabled={!editingRecord.name.trim() || !editingRecord.number.trim()}
-                  className="flex-1 py-2 bg-blue-500/30 text-blue-200 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save Changes
-                </button>
-                <button
-                  onClick={() => handleDeleteRecord(editingRecord.id)}
-                  className="px-4 py-2 bg-red-500/30 text-red-200 border border-red-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-red-500/40 transition-all"
-                >
-                  Delete
-                </button>
+                            {/* Position Buttons */}
+                            <div>
+                              <label className="block text-white/70 text-xs mb-1">Position</label>
+                              <div className="flex gap-2">
+                                {['L', 'M', 'R'].map((pos) => (
+                                  <button
+                                    key={pos}
+                                    onClick={() => setEditingRecord(prev => ({ ...prev, position: pos }))}
+                                    className={`px-4 py-1 rounded text-sm font-semibold transition-all ${
+                                      editingRecord.position === pos
+                                        ? 'bg-blue-500/50 text-blue-200 border border-blue-400'
+                                        : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                                    }`}
+                                  >
+                                    {pos}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Status Buttons */}
+                            <div>
+                              <label className="block text-white/70 text-xs mb-1">Status</label>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingRecord(prev => ({ ...prev, status: 'hit' }))}
+                                  className={`px-4 py-1 rounded text-sm font-semibold transition-all flex items-center gap-1 ${
+                                    editingRecord.status === 'hit'
+                                      ? 'bg-green-500/50 text-green-200 border border-green-400'
+                                      : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                                  }`}
+                                >
+                                  <span>✓</span>
+                                  Hit
+                                </button>
+                                <button
+                                  onClick={() => setEditingRecord(prev => ({ ...prev, status: 'miss' }))}
+                                  className={`px-4 py-1 rounded text-sm font-semibold transition-all flex items-center gap-1 ${
+                                    editingRecord.status === 'miss'
+                                      ? 'bg-red-500/50 text-red-200 border border-red-400'
+                                      : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                                  }`}
+                                >
+                                  <span>✕</span>
+                                  Miss
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 pt-2">
+                              <button
+                                onClick={handleSaveEditedRecord}
+                                disabled={!editingRecord.name.trim() || !editingRecord.number.trim()}
+                                className="px-4 py-2 bg-green-500/30 text-green-200 border border-green-400/50 rounded-lg text-sm font-semibold backdrop-blur-sm hover:bg-green-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingRecord(null)}
+                                className="px-4 py-2 bg-gray-500/30 text-gray-200 border border-gray-400/50 rounded-lg text-sm font-semibold backdrop-blur-sm hover:bg-gray-500/40 transition-all"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRecord(editingRecord.id)}
+                                className="px-4 py-2 bg-red-500/30 text-red-200 border border-red-400/50 rounded-lg text-sm font-semibold backdrop-blur-sm hover:bg-red-500/40 transition-all"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* View Mode */
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="font-semibold text-white flex items-center gap-2">
+                                <span>{record.name} {record.position}{record.number}</span>
+                                <span className={`text-lg ${
+                                  record.status === 'hit' ? 'text-green-400' : 'text-red-400'
+                                }`}>
+                                  {record.status === 'hit' ? '✓' : '✕'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-white/50">
+                                {getRelativeTime(record.timestamp)}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setEditingRecord({ ...record })}
+                              className="px-3 py-1 bg-blue-500/30 text-blue-200 border border-blue-400/50 rounded text-sm hover:bg-blue-500/40 transition-all"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -655,7 +737,7 @@ function App() {
                 </div>
 
                 {/* Edit Ledger Button */}
-                {ledgerEnabled && ledgerRecords.length > 0 && (
+                {ledgerEnabled && (
                   <button
                     onClick={() => setShowEditLedger(true)}
                     className="w-full py-2 mb-4 bg-purple-500/30 text-purple-200 border border-purple-400/50 rounded-lg backdrop-blur-sm hover:bg-purple-500/40 transition-all"
@@ -910,7 +992,10 @@ function App() {
                           backgroundColor: { duration: 0.3 }
                         }}
                         className="p-3 border-b border-white/10 last:border-b-0 transition-all duration-300 cursor-pointer hover:bg-white/5"
-                        onClick={() => handleEditRecord(record)}
+                        onClick={() => {
+                          setEditingRecord({ ...record })
+                          setShowEditLedger(true)
+                        }}
                       >
                         <div className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
                           isLedgerFlashing ? 'text-blue-100' : 'text-white'
