@@ -4,16 +4,50 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import './App.css'
 
 function App() {
+  // LocalStorage key for persistence
+  const STORAGE_KEY = 'euphy-hitz-gacha-slabs-config'
+
+  // Load initial state from localStorage
+  const loadFromStorage = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : null
+    } catch (error) {
+      console.warn('Failed to load from localStorage:', error)
+      return null
+    }
+  }
+
+  // Save state to localStorage
+  const saveToStorage = (data) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    } catch (error) {
+      console.warn('Failed to save to localStorage:', error)
+    }
+  }
+
+  // Clear localStorage
+  const clearStorage = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error)
+    }
+  }
+
+  const savedData = loadFromStorage()
+
   // Image and marking state
-  const [uploadedImage, setUploadedImage] = useState(null)
-  const [marks, setMarks] = useState([])
-  const [markSize, setMarkSize] = useState(4) // Size in rem units like original
+  const [uploadedImage, setUploadedImage] = useState(savedData?.uploadedImage || null)
+  const [marks, setMarks] = useState(savedData?.marks || [])
+  const [markSize, setMarkSize] = useState(savedData?.markSize || 4) // Size in rem units like original
   const imageRef = useRef(null)
 
   // Ledger state
-  const [ledgerEnabled, setLedgerEnabled] = useState(false)
-  const [ledgerRecords, setLedgerRecords] = useState([])
-  const [pendingRecords, setPendingRecords] = useState([]) // Records waiting for hit/miss confirmation
+  const [ledgerEnabled, setLedgerEnabled] = useState(savedData?.ledgerEnabled || false)
+  const [ledgerRecords, setLedgerRecords] = useState(savedData?.ledgerRecords || [])
+  const [pendingRecords, setPendingRecords] = useState(savedData?.pendingRecords || []) // Records waiting for hit/miss confirmation
   const [showAddRecord, setShowAddRecord] = useState(false)
   const [showEditPanel, setShowEditPanel] = useState(false)
   const [showEditLedger, setShowEditLedger] = useState(false)
@@ -29,7 +63,7 @@ function App() {
   })
 
   // Ledger settings
-  const [ledgerSettings, setLedgerSettings] = useState({
+  const [ledgerSettings, setLedgerSettings] = useState(savedData?.ledgerSettings || {
     flashFrequency: 10, // seconds between flashes
     flashDuration: 5,   // seconds to show flash
     flashingEnabled: true, // whether flashing is enabled
@@ -42,6 +76,20 @@ function App() {
   // Button visibility state for auto-hide functionality
   const [buttonsVisible, setButtonsVisible] = useState(true)
   const inactivityTimerRef = useRef(null)
+
+  // Save persistent state to localStorage whenever relevant state changes
+  useEffect(() => {
+    const dataToSave = {
+      uploadedImage,
+      marks,
+      markSize,
+      ledgerEnabled,
+      ledgerRecords,
+      pendingRecords,
+      ledgerSettings
+    }
+    saveToStorage(dataToSave)
+  }, [uploadedImage, marks, markSize, ledgerEnabled, ledgerRecords, pendingRecords, ledgerSettings])
 
   // Auto-hide buttons after 3 seconds of inactivity
   const resetInactivityTimer = useCallback(() => {
@@ -843,6 +891,7 @@ function App() {
                 {/* Reset Button */}
                 <button
                   onClick={() => {
+                    // Clear all state
                     setUploadedImage(null);
                     setMarks([]);
                     setLedgerRecords([]);
@@ -851,6 +900,17 @@ function App() {
                     setCurrentQueuedPopup(null);
                     setLedgerEnabled(false);
                     setShowEditPanel(false);
+                    // Reset ledger settings to defaults
+                    setLedgerSettings({
+                      flashFrequency: 10,
+                      flashDuration: 5,
+                      flashingEnabled: true,
+                      recordSize: 3
+                    });
+                    // Reset mark size to default
+                    setMarkSize(4);
+                    // Clear localStorage
+                    clearStorage();
                   }}
                   className="w-full py-2 bg-red-500/30 text-red-300 border border-red-400/50 rounded-lg backdrop-blur-sm hover:bg-red-500/40 transition-all"
                 >
