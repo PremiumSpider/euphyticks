@@ -39,6 +39,43 @@ function App() {
   // Ledger flashing state
   const [isLedgerFlashing, setIsLedgerFlashing] = useState(false)
 
+  // Button visibility state for auto-hide functionality
+  const [buttonsVisible, setButtonsVisible] = useState(true)
+  const inactivityTimerRef = useRef(null)
+
+  // Auto-hide buttons after 3 seconds of inactivity
+  const resetInactivityTimer = useCallback(() => {
+    setButtonsVisible(true)
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current)
+    }
+    inactivityTimerRef.current = setTimeout(() => {
+      setButtonsVisible(false)
+    }, 3000)
+  }, [])
+
+  // Set up inactivity timer on mount and mouse movement
+  useEffect(() => {
+    if (uploadedImage) {
+      resetInactivityTimer()
+      
+      const handleMouseMove = () => {
+        resetInactivityTimer()
+      }
+      
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('click', handleMouseMove)
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('click', handleMouseMove)
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current)
+        }
+      }
+    }
+  }, [uploadedImage, resetInactivityTimer])
+
   // Ledger flashing effect
   useEffect(() => {
     if (!ledgerEnabled || ledgerRecords.length === 0 || !ledgerSettings.flashingEnabled) {
@@ -221,14 +258,7 @@ function App() {
       return updated.slice(0, 10) // Keep only last 10 records
     })
 
-    // Add confirmation notification to queue
-    const confirmationItem = {
-      id: Date.now() + 1, // Ensure unique ID
-      record: finalRecord,
-      status: status
-    }
-    
-    setQueuedPopups(prev => [...prev, confirmationItem])
+    // No longer add confirmation notification to queue - user requested removal
   }
 
   // Handle queued popup display
@@ -628,52 +658,62 @@ function App() {
               Euphy Hitz Gacha Slabs
             </button>
             
-            <div className="flex gap-4">
-              {marks.length > 0 && (
-                <button
-                  onClick={() => setMarks(prev => prev.slice(0, -1))}
-                  className="px-4 py-2 bg-red-500/30 text-red-300 border border-red-400/50 rounded-lg backdrop-blur-sm hover:bg-red-500/40 transition-all"
+            <AnimatePresence>
+              {buttonsVisible && (
+                <motion.div 
+                  className="flex gap-4"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  Undo Last
-                </button>
-              )}
+                  {marks.length > 0 && (
+                    <button
+                      onClick={() => setMarks(prev => prev.slice(0, -1))}
+                      className="px-4 py-2 bg-red-500/30 text-red-300 border border-red-400/50 rounded-lg backdrop-blur-sm hover:bg-red-500/40 transition-all font-bold"
+                    >
+                      Undo Last
+                    </button>
+                  )}
 
-              {/* Add Record Button */}
-              {ledgerEnabled && (
-                <button
-                  onClick={() => setShowAddRecord(!showAddRecord)}
-                  className="px-4 py-2 bg-blue-500/30 text-blue-300 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all"
-                >
-                  Add Record
-                </button>
-              )}
+                  {/* Add Record Button */}
+                  {ledgerEnabled && (
+                    <button
+                      onClick={() => setShowAddRecord(!showAddRecord)}
+                      className="px-4 py-2 bg-blue-500/30 text-blue-300 border border-blue-400/50 rounded-lg font-bold backdrop-blur-sm hover:bg-blue-500/40 transition-all"
+                    >
+                      Add Record
+                    </button>
+                  )}
 
-              {/* Flash Shortcut Button - Only when Ledger is ON */}
-              {ledgerEnabled && (
-                <button
-                  onClick={() => setLedgerSettings(prev => ({ ...prev, flashingEnabled: !prev.flashingEnabled }))}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    ledgerSettings.flashingEnabled 
-                      ? 'bg-green-500/30 text-green-300 border border-green-400/50' 
-                      : 'bg-gray-500/30 text-gray-300 border border-gray-400/50'
-                  } backdrop-blur-sm hover:bg-opacity-40`}
-                >
-                  Flash: {ledgerSettings.flashingEnabled ? 'ON' : 'OFF'}
-                </button>
-              )}
+                  {/* Flash Shortcut Button - Only when Ledger is ON */}
+                  {ledgerEnabled && (
+                    <button
+                      onClick={() => setLedgerSettings(prev => ({ ...prev, flashingEnabled: !prev.flashingEnabled }))}
+                      className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                        ledgerSettings.flashingEnabled 
+                          ? 'bg-green-500/30 text-green-300 border border-green-400/50' 
+                          : 'bg-white/20 text-white border border-white/40'
+                      } backdrop-blur-sm hover:bg-opacity-40`}
+                    >
+                      Flash: {ledgerSettings.flashingEnabled ? 'ON' : 'OFF'}
+                    </button>
+                  )}
 
-              {/* Ledger Toggle Button */}
-              <button
-                onClick={() => setLedgerEnabled(!ledgerEnabled)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                  ledgerEnabled 
-                    ? 'bg-green-500/30 text-green-300 border border-green-400/50' 
-                    : 'bg-gray-500/30 text-gray-300 border border-gray-400/50'
-                } backdrop-blur-sm hover:bg-opacity-40`}
-              >
-                Ledger: {ledgerEnabled ? 'ON' : 'OFF'}
-              </button>
-            </div>
+                  {/* Ledger Toggle Button */}
+                  <button
+                    onClick={() => setLedgerEnabled(!ledgerEnabled)}
+                    className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                      ledgerEnabled 
+                        ? 'bg-green-500/30 text-green-300 border border-green-400/50' 
+                        : 'bg-white/20 text-white border border-white/40'
+                    } backdrop-blur-sm hover:bg-opacity-40`}
+                  >
+                    Ledger: {ledgerEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Edit Panel */}
@@ -700,7 +740,7 @@ function App() {
                   <label className="block text-white/70 text-sm mb-2">Mark Size: {markSize}</label>
                   <input
                     type="range"
-                    min="4"
+                    min="1"
                     max="17"
                     value={markSize}
                     onChange={(e) => setMarkSize(Number(e.target.value))}
@@ -805,6 +845,11 @@ function App() {
                   onClick={() => {
                     setUploadedImage(null);
                     setMarks([]);
+                    setLedgerRecords([]);
+                    setPendingRecords([]);
+                    setQueuedPopups([]);
+                    setCurrentQueuedPopup(null);
+                    setLedgerEnabled(false);
                     setShowEditPanel(false);
                   }}
                   className="w-full py-2 bg-red-500/30 text-red-300 border border-red-400/50 rounded-lg backdrop-blur-sm hover:bg-red-500/40 transition-all"
@@ -910,7 +955,7 @@ function App() {
                     className="backdrop-blur-md rounded-xl p-4 border bg-blue-500/20 border-blue-400/50 w-72"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <div className="font-semibold text-blue-200 flex items-center gap-2">
+                      <div className="font-semibold text-white flex items-center gap-2">
                         <span>
                           {currentQueuedPopup.record.name} {currentQueuedPopup.record.position}{currentQueuedPopup.record.number} ?
                         </span>
@@ -926,7 +971,7 @@ function App() {
                       </button>
                     </div>
                     
-                    <div className="text-sm text-blue-300 mb-3">
+                    <div className="text-sm text-white mb-3">
                       Was this a hit or miss?
                     </div>
                     
@@ -988,9 +1033,6 @@ function App() {
                       currentQueuedPopup.status === 'hit' ? 'text-green-300' : 'text-red-300'
                     }`}>
                       {currentQueuedPopup.status === 'hit' ? 'Hit' : 'Miss'}
-                    </div>
-                    <div className="text-xs text-white/50 mt-1">
-                      Click to dismiss
                     </div>
                   </motion.div>
                 )}
