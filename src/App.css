@@ -168,3 +168,16 @@ input[type="file"] {
 .mark-animation {
   animation: markAppear 0.3s ease-out;
 }
+
+/* Subtle blink animation for title - text only */
+@keyframes subtle-blink {
+  0%, 90% {
+    color: white;
+  }
+  95% {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  100% {
+    color: white;
+  }
+}

@@ -32,7 +32,8 @@ function App() {
   const [ledgerSettings, setLedgerSettings] = useState({
     flashFrequency: 10, // seconds between flashes
     flashDuration: 5,   // seconds to show flash
-    flashingEnabled: true // whether flashing is enabled
+    flashingEnabled: true, // whether flashing is enabled
+    recordSize: 3 // text size for ledger records (1-9)
   })
 
   // Ledger flashing state
@@ -619,9 +620,12 @@ function App() {
           <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
             <button 
               onClick={() => setShowEditPanel(!showEditPanel)}
-              className="text-2xl font-bold text-white bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg hover:bg-black/60 transition-all cursor-pointer"
+              className="text-2xl font-bold text-white bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg hover:bg-black/60 transition-all cursor-pointer animate-pulse"
+              style={{
+                animation: 'subtle-blink 3s ease-in-out infinite'
+              }}
             >
-              Image Marker & Ledger
+              Euphy Hitz Gacha Slabs
             </button>
             
             <div className="flex gap-4">
@@ -641,6 +645,20 @@ function App() {
                   className="px-4 py-2 bg-blue-500/30 text-blue-300 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all"
                 >
                   Add Record
+                </button>
+              )}
+
+              {/* Flash Shortcut Button - Only when Ledger is ON */}
+              {ledgerEnabled && (
+                <button
+                  onClick={() => setLedgerSettings(prev => ({ ...prev, flashingEnabled: !prev.flashingEnabled }))}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    ledgerSettings.flashingEnabled 
+                      ? 'bg-blue-500/30 text-blue-300 border border-blue-400/50' 
+                      : 'bg-gray-500/30 text-gray-300 border border-gray-400/50'
+                  } backdrop-blur-sm hover:bg-opacity-40`}
+                >
+                  Flash: {ledgerSettings.flashingEnabled ? 'ON' : 'OFF'}
                 </button>
               )}
 
@@ -737,6 +755,38 @@ function App() {
                       className="w-full"
                       disabled={!ledgerSettings.flashingEnabled}
                     />
+                  </div>
+
+                  {/* Record Size Control */}
+                  <div className="mb-4">
+                    <label className="block text-white/70 text-sm mb-2">
+                      Record Size: {ledgerSettings.recordSize}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setLedgerSettings(prev => ({ 
+                          ...prev, 
+                          recordSize: Math.max(1, prev.recordSize - 1) 
+                        }))}
+                        disabled={ledgerSettings.recordSize <= 1}
+                        className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        -R
+                      </button>
+                      <div className="flex-1 text-center text-white font-mono">
+                        {ledgerSettings.recordSize}
+                      </div>
+                      <button
+                        onClick={() => setLedgerSettings(prev => ({ 
+                          ...prev, 
+                          recordSize: Math.min(9, prev.recordSize + 1) 
+                        }))}
+                        disabled={ledgerSettings.recordSize >= 9}
+                        className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        +R
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -969,12 +1019,16 @@ function App() {
                 className="fixed bottom-6 left-6 max-w-sm z-40"
               >
                 <div className={`backdrop-blur-md rounded-xl border overflow-hidden transition-all duration-300 ${
-                  isLedgerFlashing 
-                    ? 'bg-blue-500/30 border-blue-400/70 shadow-lg shadow-blue-500/50' 
+                  ledgerSettings.flashingEnabled
+                    ? (isLedgerFlashing 
+                        ? 'bg-blue-500/30 border-blue-400/70 shadow-lg shadow-blue-500/50' 
+                        : 'bg-blue-500/20 border-blue-400/50')
                     : 'bg-black/10 border-white/10'
                 }`}>
                   <div className={`p-4 transition-all duration-300 ${
-                    isLedgerFlashing ? 'bg-blue-500/40' : 'bg-black/20'
+                    ledgerSettings.flashingEnabled
+                      ? (isLedgerFlashing ? 'bg-blue-500/40' : 'bg-blue-500/30')
+                      : 'bg-black/20'
                   }`}>
                     <h3 className="text-white font-bold">Ledger Records</h3>
                   </div>
@@ -996,15 +1050,21 @@ function App() {
                         }}
                         className="p-3 border-b border-white/10 transition-all duration-300 cursor-default"
                       >
-                        <div className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
-                          isLedgerFlashing ? 'text-blue-100' : 'text-white'
-                        }`}>
+                        <div 
+                          className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
+                            isLedgerFlashing ? 'text-blue-100' : 'text-white'
+                          }`}
+                          style={{ fontSize: `${0.5 + (ledgerSettings.recordSize * 0.2)}rem` }}
+                        >
                           <span>{record.name} {record.position}{record.number}</span>
-                          <span className="text-lg text-yellow-400">?</span>
+                          <span className="text-yellow-400" style={{ fontSize: `${0.7 + (ledgerSettings.recordSize * 0.2)}rem` }}>?</span>
                         </div>
-                        <div className={`text-sm transition-all duration-300 ${
-                          isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
-                        }`}>
+                        <div 
+                          className={`transition-all duration-300 ${
+                            isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
+                          }`}
+                          style={{ fontSize: `${0.4 + (ledgerSettings.recordSize * 0.15)}rem` }}
+                        >
                           {getRelativeTime(record.timestamp)} • Pending
                         </div>
                       </motion.div>
@@ -1030,21 +1090,30 @@ function App() {
                           setShowEditLedger(true)
                         }}
                       >
-                        <div className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
-                          isLedgerFlashing ? 'text-blue-100' : 'text-white'
-                        }`}>
+                        <div 
+                          className={`font-semibold transition-all duration-300 flex items-center gap-2 ${
+                            isLedgerFlashing ? 'text-blue-100' : 'text-white'
+                          }`}
+                          style={{ fontSize: `${0.5 + (ledgerSettings.recordSize * 0.2)}rem` }}
+                        >
                           <span>{record.name} {record.position}{record.number}</span>
                           {record.status && (
-                            <span className={`text-lg ${
-                              record.status === 'hit' ? 'text-green-400' : 'text-red-400'
-                            }`}>
+                            <span 
+                              className={`${
+                                record.status === 'hit' ? 'text-green-400' : 'text-red-400'
+                              }`}
+                              style={{ fontSize: `${0.7 + (ledgerSettings.recordSize * 0.2)}rem` }}
+                            >
                               {record.status === 'hit' ? '✓' : '✕'}
                             </span>
                           )}
                         </div>
-                        <div className={`text-sm transition-all duration-300 ${
-                          isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
-                        }`}>
+                        <div 
+                          className={`transition-all duration-300 ${
+                            isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
+                          }`}
+                          style={{ fontSize: `${0.4 + (ledgerSettings.recordSize * 0.15)}rem` }}
+                        >
                           {getRelativeTime(record.timestamp)}
                         </div>
                       </motion.div>
@@ -1062,7 +1131,14 @@ function App() {
             
             {/* Header Controls */}
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold text-white">Image Marker & Ledger</h1>
+              <h1 
+                className="text-3xl font-bold text-white"
+                style={{
+                  animation: 'subtle-blink 3s ease-in-out infinite'
+                }}
+              >
+                Euphy Hitz Gacha Slabs
+              </h1>
             </div>
 
             {/* Main Content Area - Centered Image Upload */}
