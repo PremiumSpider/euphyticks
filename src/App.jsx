@@ -654,7 +654,7 @@ function App() {
                   onClick={() => setLedgerSettings(prev => ({ ...prev, flashingEnabled: !prev.flashingEnabled }))}
                   className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                     ledgerSettings.flashingEnabled 
-                      ? 'bg-blue-500/30 text-blue-300 border border-blue-400/50' 
+                      ? 'bg-green-500/30 text-green-300 border border-green-400/50' 
                       : 'bg-gray-500/30 text-gray-300 border border-gray-400/50'
                   } backdrop-blur-sm hover:bg-opacity-40`}
                 >
