@@ -26,7 +26,8 @@ function App() {
   // Ledger settings
   const [ledgerSettings, setLedgerSettings] = useState({
     flashFrequency: 10, // seconds between flashes
-    flashDuration: 5    // seconds to show flash
+    flashDuration: 5,   // seconds to show flash
+    flashingEnabled: true // whether flashing is enabled
   })
 
   // Ledger flashing state
@@ -34,43 +35,66 @@ function App() {
 
   // Ledger flashing effect
   useEffect(() => {
-    if (!ledgerEnabled || ledgerRecords.length === 0) {
+    if (!ledgerEnabled || ledgerRecords.length === 0 || !ledgerSettings.flashingEnabled) {
       setIsLedgerFlashing(false)
       return
     }
 
-    const flashCycle = () => {
-      // Start flashing
+    let flashInterval
+    let currentTimeout
+
+    const startFlashing = () => {
+      // Start flashing immediately
       setIsLedgerFlashing(true)
       
       // Stop flashing after duration
-      const stopFlashTimeout = setTimeout(() => {
+      currentTimeout = setTimeout(() => {
         setIsLedgerFlashing(false)
       }, ledgerSettings.flashDuration * 1000)
-
-      return stopFlashTimeout
+      
+      // Set up recurring flashes
+      flashInterval = setInterval(() => {
+        setIsLedgerFlashing(true)
+        currentTimeout = setTimeout(() => {
+          setIsLedgerFlashing(false)
+        }, ledgerSettings.flashDuration * 1000)
+      }, ledgerSettings.flashFrequency * 1000)
     }
 
-    // Initial flash
-    const initialFlashTimeout = flashCycle()
-
-    // Set up recurring flashes
-    const flashInterval = setInterval(() => {
-      flashCycle()
-    }, ledgerSettings.flashFrequency * 1000)
+    startFlashing()
 
     // Cleanup function
     return () => {
-      clearTimeout(initialFlashTimeout)
-      clearInterval(flashInterval)
+      if (currentTimeout) clearTimeout(currentTimeout)
+      if (flashInterval) clearInterval(flashInterval)
       setIsLedgerFlashing(false)
     }
-  }, [ledgerEnabled, ledgerRecords.length, ledgerSettings.flashFrequency, ledgerSettings.flashDuration])
+  }, [ledgerEnabled, ledgerRecords.length, ledgerSettings.flashFrequency, ledgerSettings.flashDuration, ledgerSettings.flashingEnabled])
 
   // Get last 5 unique names for preset buttons
   const getLastFiveNames = () => {
     const uniqueNames = [...new Set(ledgerRecords.map(record => record.name))]
     return uniqueNames.slice(-5)
+  }
+
+  // Format relative time
+  const getRelativeTime = (timestamp) => {
+    const now = Date.now()
+    const diffMs = now - timestamp
+    
+    // Handle invalid timestamps
+    if (!timestamp || isNaN(timestamp) || diffMs < 0) {
+      return 'just now'
+    }
+    
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins} min${diffMins === 1 ? '' : 's'} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`
+    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
   }
 
   // Handle image upload
@@ -119,7 +143,7 @@ function App() {
       name: newRecord.name.trim(),
       number: newRecord.number.trim(),
       position: newRecord.position,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: Date.now()
     }
 
     setLedgerRecords(prev => {
@@ -258,6 +282,16 @@ function App() {
                 </button>
               )}
 
+              {/* Add Record Button */}
+              {ledgerEnabled && (
+                <button
+                  onClick={() => setShowAddRecord(!showAddRecord)}
+                  className="px-4 py-2 bg-blue-500/30 text-blue-300 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all"
+                >
+                  Add Record
+                </button>
+              )}
+
               {/* Ledger Toggle Button */}
               <button
                 onClick={() => setLedgerEnabled(!ledgerEnabled)}
@@ -269,16 +303,6 @@ function App() {
               >
                 Ledger: {ledgerEnabled ? 'ON' : 'OFF'}
               </button>
-
-              {/* Add Record Button */}
-              {ledgerEnabled && (
-                <button
-                  onClick={() => setShowAddRecord(!showAddRecord)}
-                  className="px-4 py-2 bg-blue-500/30 text-blue-300 border border-blue-400/50 rounded-lg font-semibold backdrop-blur-sm hover:bg-blue-500/40 transition-all"
-                >
-                  Add Record
-                </button>
-              )}
             </div>
           </div>
 
@@ -318,6 +342,19 @@ function App() {
                 <div className="mb-6">
                   <h4 className="text-white font-semibold mb-3">Ledger Settings</h4>
                   
+                  {/* Flashing Toggle */}
+                  <div className="mb-4">
+                    <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-all">
+                      <input
+                        type="checkbox"
+                        checked={ledgerSettings.flashingEnabled}
+                        onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashingEnabled: e.target.checked }))}
+                        className="w-5 h-5 rounded border-2 border-blue-400 bg-blue-500/30 checked:bg-blue-500 focus:ring-2 focus:ring-blue-400 focus:ring-offset-0"
+                      />
+                      <span className="text-white font-medium">Enable Flashing</span>
+                    </label>
+                  </div>
+
                   {/* Flash Frequency */}
                   <div className="mb-4">
                     <label className="block text-white/70 text-sm mb-2">
@@ -330,6 +367,7 @@ function App() {
                       value={ledgerSettings.flashFrequency}
                       onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashFrequency: Number(e.target.value) }))}
                       className="w-full"
+                      disabled={!ledgerSettings.flashingEnabled}
                     />
                   </div>
 
@@ -345,6 +383,7 @@ function App() {
                       value={ledgerSettings.flashDuration}
                       onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashDuration: Number(e.target.value) }))}
                       className="w-full"
+                      disabled={!ledgerSettings.flashingEnabled}
                     />
                   </div>
                 </div>
@@ -421,7 +460,7 @@ function App() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ 
-                  opacity: 1, 
+                  opacity: ledgerSettings.flashingEnabled && !isLedgerFlashing ? 0 : 1, 
                   y: 0,
                   scale: isLedgerFlashing ? 1.05 : 1,
                   boxShadow: isLedgerFlashing ? '0 0 30px rgba(59, 130, 246, 0.8)' : '0 0 0px rgba(59, 130, 246, 0)'
@@ -430,7 +469,8 @@ function App() {
                 transition={{ 
                   duration: 0.3,
                   scale: { duration: 0.2 },
-                  boxShadow: { duration: 0.2 }
+                  boxShadow: { duration: 0.2 },
+                  opacity: { duration: 0.5 }
                 }}
                 className="fixed bottom-6 left-6 max-w-sm z-40"
               >
@@ -469,7 +509,7 @@ function App() {
                         <div className={`text-sm transition-all duration-300 ${
                           isLedgerFlashing ? 'text-blue-200' : 'text-white/50'
                         }`}>
-                          {record.timestamp}
+                          {getRelativeTime(record.timestamp)}
                         </div>
                       </motion.div>
                     ))}
