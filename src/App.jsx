@@ -141,9 +141,9 @@ function App() {
     }
   }, [uploadedImage, resetInactivityTimer])
 
-  // Ledger flashing effect
+  // Ledger flashing effect - Modified to flash even with no records
   useEffect(() => {
-    if (!ledgerEnabled || ledgerRecords.length === 0 || !ledgerSettings.flashingEnabled) {
+    if (!ledgerEnabled || !ledgerSettings.flashingEnabled) {
       setIsLedgerFlashing(false)
       setToggleFlashing(false)
       return
@@ -183,7 +183,7 @@ function App() {
       setIsLedgerFlashing(false)
       setToggleFlashing(false)
     }
-  }, [ledgerEnabled, ledgerRecords.length, ledgerSettings.flashFrequency, ledgerSettings.flashDuration, ledgerSettings.flashingEnabled])
+  }, [ledgerEnabled, ledgerSettings.flashFrequency, ledgerSettings.flashDuration, ledgerSettings.flashingEnabled])
 
   // Get last 5 unique names for preset buttons
   const getLastFiveNames = () => {
@@ -1123,9 +1123,9 @@ function App() {
             )}
           </AnimatePresence>
 
-          {/* Yellow Bar in Center Middle - Show when flash is OFF OR when flashing */}
+          {/* Yellow Bar in Center Middle - Show when ledger is enabled and (flash is OFF OR when flashing) */}
           <AnimatePresence>
-            {uploadedImage && (!ledgerSettings.flashingEnabled || (ledgerSettings.flashingEnabled && isLedgerFlashing)) && (
+            {uploadedImage && ledgerEnabled && (!ledgerSettings.flashingEnabled || (ledgerSettings.flashingEnabled && isLedgerFlashing)) && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ 
