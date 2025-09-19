@@ -72,8 +72,16 @@ function App() {
 
   // New state for Chases and Bags
   const [chasesCount, setChasesCount] = useState(savedData?.chasesCount || 12)
-  const [bagsCount, setBagsCount] = useState(savedData?.bagsCount || 50)
+  const [bagsLeft, setBagsLeft] = useState(savedData?.bagsLeft || 18)
+  const [bagsMiddle, setBagsMiddle] = useState(savedData?.bagsMiddle || 18)
+  const [bagsRight, setBagsRight] = useState(savedData?.bagsRight || 18)
   const [toggleFlashing, setToggleFlashing] = useState(false)
+
+  // Calculate total bags from left + middle + right
+  const totalBags = bagsLeft + bagsMiddle + bagsRight
+
+  // State to track ledger state before opening edit panel
+  const [ledgerStateBeforeEdit, setLedgerStateBeforeEdit] = useState(null)
 
   // Ledger flashing state
   const [isLedgerFlashing, setIsLedgerFlashing] = useState(false)
@@ -93,10 +101,12 @@ function App() {
       pendingRecords,
       ledgerSettings,
       chasesCount,
-      bagsCount
+      bagsLeft,
+      bagsMiddle,
+      bagsRight
     }
     saveToStorage(dataToSave)
-  }, [uploadedImage, marks, markSize, ledgerEnabled, ledgerRecords, pendingRecords, ledgerSettings, chasesCount, bagsCount])
+  }, [uploadedImage, marks, markSize, ledgerEnabled, ledgerRecords, pendingRecords, ledgerSettings, chasesCount, bagsLeft, bagsMiddle, bagsRight])
 
   // Auto-hide buttons after 3 seconds of inactivity
   const resetInactivityTimer = useCallback(() => {
@@ -710,7 +720,20 @@ function App() {
           {/* Floating Controls */}
           <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
             <button 
-              onClick={() => setShowEditPanel(!showEditPanel)}
+              onClick={() => {
+                if (!showEditPanel) {
+                  // Opening edit panel - save current ledger state and turn it off
+                  setLedgerStateBeforeEdit(ledgerEnabled)
+                  setLedgerEnabled(false)
+                } else {
+                  // Closing edit panel - restore previous ledger state if it was on
+                  if (ledgerStateBeforeEdit) {
+                    setLedgerEnabled(true)
+                  }
+                  setLedgerStateBeforeEdit(null)
+                }
+                setShowEditPanel(!showEditPanel)
+              }}
               className="text-2xl font-bold text-white bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg hover:bg-black/60 transition-all cursor-pointer animate-pulse"
               style={{
                 animation: 'subtle-blink 3s ease-in-out infinite'
@@ -780,248 +803,334 @@ function App() {
           {/* Edit Panel */}
           <AnimatePresence>
             {showEditPanel && (
-              <motion.div
-                initial={{ opacity: 0, x: -300 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -300 }}
-                className="absolute top-20 left-4 z-30 bg-black/80 backdrop-blur-md rounded-xl p-6 border border-white/20 w-80"
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-white font-bold text-lg">Edit Settings</h3>
-                  <button
-                    onClick={() => setShowEditPanel(false)}
-                    className="text-white/70 hover:text-white text-xl"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Mark Size Control */}
-                <div className="mb-6">
-                  <label className="block text-white/70 text-sm mb-2">Mark Size: {markSize}</label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="17"
-                    value={markSize}
-                    onChange={(e) => setMarkSize(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Chases and Bags Controls */}
-                <div className="mb-6">
-                  <h4 className="text-white font-semibold mb-3">Chases & Bags</h4>
-                  
-                  {/* Chases Control */}
-                  <div className="mb-4">
-                    <label className="block text-white/70 text-sm mb-2">
-                      Chases: {chasesCount}
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setChasesCount(prev => Math.max(0, prev - 1))}
-                        disabled={chasesCount <= 0}
-                        className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        -C
-                      </button>
-                      <div className="flex-1 text-center text-white font-mono">
-                        {chasesCount}
-                      </div>
-                      <button
-                        onClick={() => setChasesCount(prev => prev + 1)}
-                        className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
-                      >
-                        +C
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bags Control */}
-                  <div className="mb-4">
-                    <label className="block text-white/70 text-sm mb-2">
-                      Bags: {bagsCount}
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setBagsCount(prev => Math.max(0, prev - 1))}
-                        disabled={bagsCount <= 0}
-                        className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        -B
-                      </button>
-                      <div className="flex-1 text-center text-white font-mono">
-                        {bagsCount}
-                      </div>
-                      <button
-                        onClick={() => setBagsCount(prev => prev + 1)}
-                        className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
-                      >
-                        +B
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Ledger Settings */}
-                <div className="mb-6">
-                  <h4 className="text-white font-semibold mb-3">Ledger Settings</h4>
-                  
-                  {/* Flashing Toggle */}
-                  <div className="mb-4">
-                    <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-all">
-                      <input
-                        type="checkbox"
-                        checked={ledgerSettings.flashingEnabled}
-                        onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashingEnabled: e.target.checked }))}
-                        className="w-5 h-5 rounded border-2 border-blue-400 bg-blue-500/30 checked:bg-blue-500 focus:ring-2 focus:ring-blue-400 focus:ring-offset-0"
-                      />
-                      <span className="text-white font-medium">Enable Flashing</span>
-                    </label>
-                  </div>
-
-                  {/* Flash Frequency */}
-                  <div className="mb-4">
-                    <label className="block text-white/70 text-sm mb-2">
-                      Flash Frequency: {ledgerSettings.flashFrequency}s
-                    </label>
-                    <input
-                      type="range"
-                      min="5"
-                      max="30"
-                      value={ledgerSettings.flashFrequency}
-                      onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashFrequency: Number(e.target.value) }))}
-                      className="w-full"
-                      disabled={!ledgerSettings.flashingEnabled}
-                    />
-                  </div>
-
-                  {/* Flash Duration */}
-                  <div className="mb-4">
-                    <label className="block text-white/70 text-sm mb-2">
-                      Flash Duration: {ledgerSettings.flashDuration}s
-                    </label>
-                    <input
-                      type="range"
-                      min="5"
-                      max="30"
-                      value={ledgerSettings.flashDuration}
-                      onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashDuration: Number(e.target.value) }))}
-                      className="w-full"
-                      disabled={!ledgerSettings.flashingEnabled}
-                    />
-                  </div>
-
-                  {/* Record Size Control */}
-                  <div className="mb-4">
-                    <label className="block text-white/70 text-sm mb-2">
-                      Record Size: {ledgerSettings.recordSize}
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setLedgerSettings(prev => ({ 
-                          ...prev, 
-                          recordSize: Math.max(1, prev.recordSize - 1) 
-                        }))}
-                        disabled={ledgerSettings.recordSize <= 1}
-                        className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        -R
-                      </button>
-                      <div className="flex-1 text-center text-white font-mono">
-                        {ledgerSettings.recordSize}
-                      </div>
-                      <button
-                        onClick={() => setLedgerSettings(prev => ({ 
-                          ...prev, 
-                          recordSize: Math.min(9, prev.recordSize + 1) 
-                        }))}
-                        disabled={ledgerSettings.recordSize >= 9}
-                        className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        +R
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Edit Ledger Button */}
-                {ledgerEnabled && (
-                  <button
-                    onClick={() => setShowEditLedger(true)}
-                    className="w-full py-2 mb-4 bg-purple-500/30 text-purple-200 border border-purple-400/50 rounded-lg backdrop-blur-sm hover:bg-purple-500/40 transition-all"
-                  >
-                    Edit Ledger
-                  </button>
-                )}
-
-                {/* Update/Replace Image Button */}
-                <div className="mb-4">
-                  <label className="block text-white/70 text-sm mb-2">Update Image</label>
-                  <label className="w-full py-2 bg-blue-500/30 text-blue-200 border border-blue-400/50 rounded-lg backdrop-blur-sm hover:bg-blue-500/40 transition-all cursor-pointer flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Replace Image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                  <p className="text-white/50 text-xs mt-1">
-                    Select a new image to replace the current one. All marks will be cleared.
-                  </p>
-                </div>
-
-                {/* Reset Button */}
-                <button
+              <>
+                {/* Backdrop for click-outside-to-close */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-25"
                   onClick={() => {
-                    // Clear all state
-                    setUploadedImage(null);
-                    setMarks([]);
-                    setLedgerRecords([]);
-                    setPendingRecords([]);
-                    setQueuedPopups([]);
-                    setCurrentQueuedPopup(null);
-                    setLedgerEnabled(false);
-                    setShowEditPanel(false);
-                    // Reset ledger settings to defaults
-                    setLedgerSettings({
-                      flashFrequency: 10,
-                      flashDuration: 5,
-                      flashingEnabled: true,
-                      recordSize: 3
-                    });
-                    // Reset mark size to default
-                    setMarkSize(4);
-                    // Reset chases and bags to defaults
-                    setChasesCount(12);
-                    setBagsCount(50);
-                    setToggleFlashing(false);
-                    // Clear localStorage
-                    clearStorage();
+                    // Closing edit panel - restore previous ledger state if it was on
+                    if (ledgerStateBeforeEdit) {
+                      setLedgerEnabled(true)
+                    }
+                    setLedgerStateBeforeEdit(null)
+                    setShowEditPanel(false)
                   }}
-                  className="w-full py-2 bg-red-500/30 text-red-300 border border-red-400/50 rounded-lg backdrop-blur-sm hover:bg-red-500/40 transition-all"
+                />
+                <motion.div
+                  initial={{ opacity: 0, x: -300 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -300 }}
+                  className="absolute top-4 left-4 bottom-4 z-30 bg-black/80 backdrop-blur-md rounded-xl p-6 border border-white/20 w-96 overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Reset Application
-                </button>
-              </motion.div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-white font-bold text-lg">Edit Settings</h3>
+                    <button
+                      onClick={() => {
+                        // Closing edit panel - restore previous ledger state if it was on
+                        if (ledgerStateBeforeEdit) {
+                          setLedgerEnabled(true)
+                        }
+                        setLedgerStateBeforeEdit(null)
+                        setShowEditPanel(false)
+                      }}
+                      className="text-white/70 hover:text-white text-xl"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Mark Size Control */}
+                  <div className="mb-6">
+                    <label className="block text-white/70 text-sm mb-2">Mark Size: {markSize}</label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="17"
+                      value={markSize}
+                      onChange={(e) => setMarkSize(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Chases and Bags Controls */}
+                  <div className="mb-6">
+                    <h4 className="text-white font-semibold mb-3">Chases & Bags</h4>
+                    
+                    {/* Chases Control */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Chases: {chasesCount}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setChasesCount(prev => Math.max(0, prev - 1))}
+                          disabled={chasesCount <= 0}
+                          className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          -C
+                        </button>
+                        <div className="flex-1 text-center text-white font-mono">
+                          {chasesCount}
+                        </div>
+                        <button
+                          onClick={() => setChasesCount(prev => prev + 1)}
+                          className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
+                        >
+                          +C
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bags Left Control */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Bags Left: {bagsLeft}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setBagsLeft(prev => Math.max(0, prev - 1))}
+                          disabled={bagsLeft <= 0}
+                          className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          -BL
+                        </button>
+                        <div className="flex-1 text-center text-white font-mono">
+                          {bagsLeft}
+                        </div>
+                        <button
+                          onClick={() => setBagsLeft(prev => prev + 1)}
+                          className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
+                        >
+                          +BL
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bags Middle Control */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Bags Middle: {bagsMiddle}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setBagsMiddle(prev => Math.max(0, prev - 1))}
+                          disabled={bagsMiddle <= 0}
+                          className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          -BM
+                        </button>
+                        <div className="flex-1 text-center text-white font-mono">
+                          {bagsMiddle}
+                        </div>
+                        <button
+                          onClick={() => setBagsMiddle(prev => prev + 1)}
+                          className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
+                        >
+                          +BM
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bags Right Control */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Bags Right: {bagsRight}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setBagsRight(prev => Math.max(0, prev - 1))}
+                          disabled={bagsRight <= 0}
+                          className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          -BR
+                        </button>
+                        <div className="flex-1 text-center text-white font-mono">
+                          {bagsRight}
+                        </div>
+                        <button
+                          onClick={() => setBagsRight(prev => prev + 1)}
+                          className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
+                        >
+                          +BR
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Total Bags Display */}
+                    <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
+                      <label className="block text-white/70 text-sm mb-1">
+                        Total Bags: {totalBags}
+                      </label>
+                      <div className="text-white/50 text-xs">
+                        Calculated from Left + Middle + Right
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Ledger Settings */}
+                  <div className="mb-6">
+                    <h4 className="text-white font-semibold mb-3">Ledger Settings</h4>
+                    
+                    {/* Flashing Toggle */}
+                    <div className="mb-4">
+                      <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={ledgerSettings.flashingEnabled}
+                          onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashingEnabled: e.target.checked }))}
+                          className="w-5 h-5 rounded border-2 border-blue-400 bg-blue-500/30 checked:bg-blue-500 focus:ring-2 focus:ring-blue-400 focus:ring-offset-0"
+                        />
+                        <span className="text-white font-medium">Enable Flashing</span>
+                      </label>
+                    </div>
+
+                    {/* Flash Frequency */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Flash Frequency: {ledgerSettings.flashFrequency}s
+                      </label>
+                      <input
+                        type="range"
+                        min="5"
+                        max="30"
+                        value={ledgerSettings.flashFrequency}
+                        onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashFrequency: Number(e.target.value) }))}
+                        className="w-full"
+                        disabled={!ledgerSettings.flashingEnabled}
+                      />
+                    </div>
+
+                    {/* Flash Duration */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Flash Duration: {ledgerSettings.flashDuration}s
+                      </label>
+                      <input
+                        type="range"
+                        min="5"
+                        max="30"
+                        value={ledgerSettings.flashDuration}
+                        onChange={(e) => setLedgerSettings(prev => ({ ...prev, flashDuration: Number(e.target.value) }))}
+                        className="w-full"
+                        disabled={!ledgerSettings.flashingEnabled}
+                      />
+                    </div>
+
+                    {/* Record Size Control */}
+                    <div className="mb-4">
+                      <label className="block text-white/70 text-sm mb-2">
+                        Record Size: {ledgerSettings.recordSize}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setLedgerSettings(prev => ({ 
+                            ...prev, 
+                            recordSize: Math.max(1, prev.recordSize - 1) 
+                          }))}
+                          disabled={ledgerSettings.recordSize <= 1}
+                          className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          -R
+                        </button>
+                        <div className="flex-1 text-center text-white font-mono">
+                          {ledgerSettings.recordSize}
+                        </div>
+                        <button
+                          onClick={() => setLedgerSettings(prev => ({ 
+                            ...prev, 
+                            recordSize: Math.min(9, prev.recordSize + 1) 
+                          }))}
+                          disabled={ledgerSettings.recordSize >= 9}
+                          className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          +R
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Edit Ledger Button */}
+                  {ledgerEnabled && (
+                    <button
+                      onClick={() => setShowEditLedger(true)}
+                      className="w-full py-2 mb-4 bg-purple-500/30 text-purple-200 border border-purple-400/50 rounded-lg backdrop-blur-sm hover:bg-purple-500/40 transition-all"
+                    >
+                      Edit Ledger
+                    </button>
+                  )}
+
+                  {/* Update/Replace Image Button */}
+                  <div className="mb-4">
+                    <label className="block text-white/70 text-sm mb-2">Update Image</label>
+                    <label className="w-full py-2 bg-blue-500/30 text-blue-200 border border-blue-400/50 rounded-lg backdrop-blur-sm hover:bg-blue-500/40 transition-all cursor-pointer flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
+                      </svg>
+                      Replace Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-white/50 text-xs mt-1">
+                      Select a new image to replace the current one. All marks will be cleared.
+                    </p>
+                  </div>
+
+                  {/* Reset Button */}
+                  <button
+                    onClick={() => {
+                      // Clear all state
+                      setUploadedImage(null);
+                      setMarks([]);
+                      setLedgerRecords([]);
+                      setPendingRecords([]);
+                      setQueuedPopups([]);
+                      setCurrentQueuedPopup(null);
+                      setLedgerEnabled(false);
+                      setShowEditPanel(false);
+                      // Reset ledger settings to defaults
+                      setLedgerSettings({
+                        flashFrequency: 10,
+                        flashDuration: 5,
+                        flashingEnabled: true,
+                        recordSize: 3
+                      });
+                      // Reset mark size to default
+                      setMarkSize(4);
+                      // Reset chases and bags to defaults
+                      setChasesCount(12);
+                      setBagsLeft(18);
+                      setBagsMiddle(18);
+                      setBagsRight(18);
+                      setToggleFlashing(false);
+                      // Clear localStorage
+                      clearStorage();
+                    }}
+                    className="w-full py-2 bg-red-500/30 text-red-300 border border-red-400/50 rounded-lg backdrop-blur-sm hover:bg-red-500/40 transition-all"
+                  >
+                    Reset Application
+                  </button>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
 
-
-          {/* Yellow Bar in Center Middle - Only show when toggle is flashing */}
+          {/* Yellow Bar in Center Middle - Show when flash is OFF OR when flashing */}
           <AnimatePresence>
-            {uploadedImage && toggleFlashing && (
+            {uploadedImage && (!ledgerSettings.flashingEnabled || (ledgerSettings.flashingEnabled && isLedgerFlashing)) && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ 
                   opacity: isLedgerFlashing ? 1 : 0.3,
-                  y: 0,
+                  y: ledgerEnabled && (pendingRecords.length > 0 || ledgerRecords.length > 0) ? -100 : 0,
                   scale: isLedgerFlashing ? 1.1 : 1,
                   boxShadow: isLedgerFlashing ? '0 0 30px rgba(234, 179, 8, 0.8)' : '0 0 0px rgba(234, 179, 8, 0)'
                 }}
@@ -1030,7 +1139,8 @@ function App() {
                   duration: 0.3,
                   scale: { duration: 0.2 },
                   boxShadow: { duration: 0.2 },
-                  opacity: { duration: 0.5 }
+                  opacity: { duration: 0.5 },
+                  y: { duration: 0.3 }
                 }}
                 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none"
               >
@@ -1039,8 +1149,13 @@ function App() {
                     ? 'bg-yellow-500/90 border-yellow-400/70 shadow-yellow-500/50' 
                     : 'bg-yellow-500/60 border-yellow-400/50'
                 }`}>
-                  <div className="text-black font-bold text-4xl">
-                    {chasesCount} Chases / {bagsCount} Bagz
+                  <div className="text-black font-bold text-4xl mb-2 text-right">
+                    <div>Left has {bagsLeft}</div>
+                    <div>Middle has {bagsMiddle}</div>
+                    <div>Right has {bagsRight}</div>
+                  </div>
+                  <div className="text-black font-bold text-4xl text-center">
+                    {chasesCount} Chases / {totalBags} Bagz
                   </div>
                 </div>
               </motion.div>
@@ -1054,24 +1169,42 @@ function App() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="absolute bottom-6 right-6 z-30 flex gap-3"
+                className="absolute bottom-6 right-6 z-30 flex gap-2"
               >
                 {/* -1C Button */}
                 <button
                   onClick={() => setChasesCount(prev => Math.max(0, prev - 1))}
                   disabled={chasesCount <= 0}
-                  className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-lg hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-14 h-14 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-sm hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   -1C
                 </button>
                 
-                {/* -1B Button */}
+                {/* -1BL Button */}
                 <button
-                  onClick={() => setBagsCount(prev => Math.max(0, prev - 1))}
-                  disabled={bagsCount <= 0}
-                  className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-lg hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  onClick={() => setBagsLeft(prev => Math.max(0, prev - 1))}
+                  disabled={bagsLeft <= 0}
+                  className="w-14 h-14 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-xs hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  -1B
+                  -1BL
+                </button>
+                
+                {/* -1BM Button */}
+                <button
+                  onClick={() => setBagsMiddle(prev => Math.max(0, prev - 1))}
+                  disabled={bagsMiddle <= 0}
+                  className="w-14 h-14 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-xs hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  -1BM
+                </button>
+                
+                {/* -1BR Button */}
+                <button
+                  onClick={() => setBagsRight(prev => Math.max(0, prev - 1))}
+                  disabled={bagsRight <= 0}
+                  className="w-14 h-14 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-xs hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  -1BR
                 </button>
               </motion.div>
             )}
@@ -1181,7 +1314,7 @@ function App() {
                           e.stopPropagation()
                           handleDismissQueuedPopup()
                         }}
-                        className="text-white/70 hover:text-white text-sm"
+                        className="text-white/70 hover:text-white text-xl"
                       >
                         ✕
                       </button>
