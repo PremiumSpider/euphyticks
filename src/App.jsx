@@ -70,6 +70,11 @@ function App() {
     recordSize: 3 // text size for ledger records (1-9)
   })
 
+  // New state for Chases and Bags
+  const [chasesCount, setChasesCount] = useState(savedData?.chasesCount || 12)
+  const [bagsCount, setBagsCount] = useState(savedData?.bagsCount || 50)
+  const [toggleFlashing, setToggleFlashing] = useState(false)
+
   // Ledger flashing state
   const [isLedgerFlashing, setIsLedgerFlashing] = useState(false)
 
@@ -86,10 +91,12 @@ function App() {
       ledgerEnabled,
       ledgerRecords,
       pendingRecords,
-      ledgerSettings
+      ledgerSettings,
+      chasesCount,
+      bagsCount
     }
     saveToStorage(dataToSave)
-  }, [uploadedImage, marks, markSize, ledgerEnabled, ledgerRecords, pendingRecords, ledgerSettings])
+  }, [uploadedImage, marks, markSize, ledgerEnabled, ledgerRecords, pendingRecords, ledgerSettings, chasesCount, bagsCount])
 
   // Auto-hide buttons after 3 seconds of inactivity
   const resetInactivityTimer = useCallback(() => {
@@ -128,6 +135,7 @@ function App() {
   useEffect(() => {
     if (!ledgerEnabled || ledgerRecords.length === 0 || !ledgerSettings.flashingEnabled) {
       setIsLedgerFlashing(false)
+      setToggleFlashing(false)
       return
     }
 
@@ -137,17 +145,21 @@ function App() {
     const startFlashing = () => {
       // Start flashing immediately
       setIsLedgerFlashing(true)
+      setToggleFlashing(true)
       
       // Stop flashing after duration
       currentTimeout = setTimeout(() => {
         setIsLedgerFlashing(false)
+        setToggleFlashing(false)
       }, ledgerSettings.flashDuration * 1000)
       
       // Set up recurring flashes
       flashInterval = setInterval(() => {
         setIsLedgerFlashing(true)
+        setToggleFlashing(true)
         currentTimeout = setTimeout(() => {
           setIsLedgerFlashing(false)
+          setToggleFlashing(false)
         }, ledgerSettings.flashDuration * 1000)
       }, ledgerSettings.flashFrequency * 1000)
     }
@@ -159,6 +171,7 @@ function App() {
       if (currentTimeout) clearTimeout(currentTimeout)
       if (flashInterval) clearInterval(flashInterval)
       setIsLedgerFlashing(false)
+      setToggleFlashing(false)
     }
   }, [ledgerEnabled, ledgerRecords.length, ledgerSettings.flashFrequency, ledgerSettings.flashDuration, ledgerSettings.flashingEnabled])
 
@@ -399,15 +412,15 @@ function App() {
               {pendingRecords.length > 0 && (
                 <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
                   <div className="text-white/70 text-sm mb-2">Previous Entries:</div>
-                  <div className="space-y-1">
-                    {pendingRecords.slice(0, 3).map((record, index) => (
-                      <div key={record.id} className="text-sm text-white/60 flex items-center gap-2">
-                        <span className="text-yellow-400">?</span>
-                        <span>{record.name} {record.position}{record.number}</span>
-                        <span className="text-white/40">• {getRelativeTime(record.timestamp)}</span>
-                      </div>
-                    ))}
-                  </div>
+                        <div className="space-y-1">
+                          {pendingRecords.slice(0, 3).map((record, index) => (
+                            <div key={record.id} className="text-sm text-white/60 flex items-center gap-2">
+                              <span className="text-yellow-400">?</span>
+                              <span>{record.name} {record.position === 'L' ? 'Left' : record.position === 'M' ? 'Middle' : 'Right'}{record.number}</span>
+                              <span className="text-white/40">• {getRelativeTime(record.timestamp)}</span>
+                            </div>
+                          ))}
+                        </div>
                 </div>
               )}
               
@@ -662,7 +675,7 @@ function App() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className="font-semibold text-white flex items-center gap-2">
-                                <span>{record.name} {record.position}{record.number}</span>
+                                <span>{record.name} {record.position === 'L' ? 'Left' : record.position === 'M' ? 'Middle' : 'Right'}{record.number}</span>
                                 <span className={`text-lg ${
                                   record.status === 'hit' ? 'text-green-400' : 'text-red-400'
                                 }`}>
@@ -794,6 +807,62 @@ function App() {
                     onChange={(e) => setMarkSize(Number(e.target.value))}
                     className="w-full"
                   />
+                </div>
+
+                {/* Chases and Bags Controls */}
+                <div className="mb-6">
+                  <h4 className="text-white font-semibold mb-3">Chases & Bags</h4>
+                  
+                  {/* Chases Control */}
+                  <div className="mb-4">
+                    <label className="block text-white/70 text-sm mb-2">
+                      Chases: {chasesCount}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setChasesCount(prev => Math.max(0, prev - 1))}
+                        disabled={chasesCount <= 0}
+                        className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        -C
+                      </button>
+                      <div className="flex-1 text-center text-white font-mono">
+                        {chasesCount}
+                      </div>
+                      <button
+                        onClick={() => setChasesCount(prev => prev + 1)}
+                        className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
+                      >
+                        +C
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bags Control */}
+                  <div className="mb-4">
+                    <label className="block text-white/70 text-sm mb-2">
+                      Bags: {bagsCount}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setBagsCount(prev => Math.max(0, prev - 1))}
+                        disabled={bagsCount <= 0}
+                        className="px-3 py-1 bg-red-500/30 text-red-200 border border-red-400/50 rounded font-semibold hover:bg-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        -B
+                      </button>
+                      <div className="flex-1 text-center text-white font-mono">
+                        {bagsCount}
+                      </div>
+                      <button
+                        onClick={() => setBagsCount(prev => prev + 1)}
+                        className="px-3 py-1 bg-green-500/30 text-green-200 border border-green-400/50 rounded font-semibold hover:bg-green-500/40 transition-all"
+                      >
+                        +B
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
 
                 {/* Ledger Settings */}
@@ -929,6 +998,10 @@ function App() {
                     });
                     // Reset mark size to default
                     setMarkSize(4);
+                    // Reset chases and bags to defaults
+                    setChasesCount(12);
+                    setBagsCount(50);
+                    setToggleFlashing(false);
                     // Clear localStorage
                     clearStorage();
                   }}
@@ -940,6 +1013,69 @@ function App() {
             )}
           </AnimatePresence>
 
+
+          {/* Yellow Bar in Center Middle - Only show when toggle is flashing */}
+          <AnimatePresence>
+            {uploadedImage && toggleFlashing && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ 
+                  opacity: isLedgerFlashing ? 1 : 0.3,
+                  y: 0,
+                  scale: isLedgerFlashing ? 1.1 : 1,
+                  boxShadow: isLedgerFlashing ? '0 0 30px rgba(234, 179, 8, 0.8)' : '0 0 0px rgba(234, 179, 8, 0)'
+                }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ 
+                  duration: 0.3,
+                  scale: { duration: 0.2 },
+                  boxShadow: { duration: 0.2 },
+                  opacity: { duration: 0.5 }
+                }}
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none"
+              >
+                <div className={`backdrop-blur-sm rounded-lg px-8 py-4 border shadow-lg transition-all duration-300 ${
+                  isLedgerFlashing 
+                    ? 'bg-yellow-500/90 border-yellow-400/70 shadow-yellow-500/50' 
+                    : 'bg-yellow-500/60 border-yellow-400/50'
+                }`}>
+                  <div className="text-black font-bold text-4xl">
+                    {chasesCount} Chases / {bagsCount} Bagz
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Transparent Circle Shortcut Buttons - Bottom Right */}
+          <AnimatePresence>
+            {uploadedImage && buttonsVisible && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="absolute bottom-6 right-6 z-30 flex gap-3"
+              >
+                {/* -1C Button */}
+                <button
+                  onClick={() => setChasesCount(prev => Math.max(0, prev - 1))}
+                  disabled={chasesCount <= 0}
+                  className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-lg hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  -1C
+                </button>
+                
+                {/* -1B Button */}
+                <button
+                  onClick={() => setBagsCount(prev => Math.max(0, prev - 1))}
+                  disabled={bagsCount <= 0}
+                  className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-lg hover:bg-black/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  -1B
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Full Screen Image */}
           <TransformWrapper
@@ -1037,7 +1173,7 @@ function App() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="font-semibold text-white flex items-center gap-2">
                         <span>
-                          {currentQueuedPopup.record.name} {currentQueuedPopup.record.position}{currentQueuedPopup.record.number} ?
+                          {currentQueuedPopup.record.name} {currentQueuedPopup.record.position === 'L' ? 'Left' : currentQueuedPopup.record.position === 'M' ? 'Middle' : 'Right'}{currentQueuedPopup.record.number} ?
                         </span>
                       </div>
                       <button
@@ -1093,7 +1229,7 @@ function App() {
                         currentQueuedPopup.status === 'hit' ? 'text-green-200' : 'text-red-200'
                       }`}>
                         <span>
-                          {currentQueuedPopup.record.name} {currentQueuedPopup.record.position}{currentQueuedPopup.record.number}
+                          {currentQueuedPopup.record.name} {currentQueuedPopup.record.position === 'L' ? 'Left' : currentQueuedPopup.record.position === 'M' ? 'Middle' : 'Right'}{currentQueuedPopup.record.number}
                         </span>
                         <span className="text-xl">
                           {currentQueuedPopup.status === 'hit' ? '✓' : '✕'}
@@ -1138,7 +1274,11 @@ function App() {
                   boxShadow: { duration: 0.2 },
                   opacity: { duration: 0.5 }
                 }}
-                className="fixed bottom-6 left-6 max-w-sm z-40"
+                className="fixed bottom-6 left-6 z-40"
+                style={{ 
+                  maxWidth: `${12 + (ledgerSettings.recordSize * 4)}rem`,
+                  minWidth: `${16 + (ledgerSettings.recordSize * 2)}rem`
+                }}
               >
                 <div className={`backdrop-blur-md rounded-xl border overflow-hidden transition-all duration-300 ${
                   ledgerSettings.flashingEnabled
@@ -1152,10 +1292,15 @@ function App() {
                       ? (isLedgerFlashing ? 'bg-blue-500/40' : 'bg-blue-500/30')
                       : 'bg-black/20'
                   }`}>
-                    <h3 className="text-white font-bold">Ledger Records</h3>
+                    <h3 className="text-white font-bold"></h3>
                   </div>
                   
-                  <div className="max-h-80 overflow-y-auto">
+                  <div 
+                    className="overflow-y-auto"
+                    style={{ 
+                      maxHeight: `${20 + (ledgerSettings.recordSize * 4)}rem`
+                    }}
+                  >
                     {/* Pending Records (with ?) */}
                     {pendingRecords.map((record, index) => (
                       <motion.div
@@ -1178,7 +1323,7 @@ function App() {
                           }`}
                           style={{ fontSize: `${0.5 + (ledgerSettings.recordSize * 0.2)}rem` }}
                         >
-                          <span>{record.name} {record.position}{record.number}</span>
+                          <span>{record.name} {record.position === 'L' ? 'Left' : record.position === 'M' ? 'Middle' : 'Right'}{record.number}</span>
                           <span className="text-yellow-400" style={{ fontSize: `${0.7 + (ledgerSettings.recordSize * 0.2)}rem` }}>?</span>
                         </div>
                         <div 
@@ -1218,7 +1363,7 @@ function App() {
                           }`}
                           style={{ fontSize: `${0.5 + (ledgerSettings.recordSize * 0.2)}rem` }}
                         >
-                          <span>{record.name} {record.position}{record.number}</span>
+                          <span>{record.name} {record.position === 'L' ? 'Left' : record.position === 'M' ? 'Middle' : 'Right'}{record.number}</span>
                           {record.status && (
                             <span 
                               className={`${
@@ -1226,7 +1371,7 @@ function App() {
                               }`}
                               style={{ fontSize: `${0.7 + (ledgerSettings.recordSize * 0.2)}rem` }}
                             >
-                              {record.status === 'hit' ? '✓' : '✕'}
+                              {record.status === 'hit' ? '✓ (Hit)' : '✕ (Miss)'}
                             </span>
                           )}
                         </div>
